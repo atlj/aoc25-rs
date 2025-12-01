@@ -4,19 +4,20 @@ enum Direction {
     Right(usize),
 }
 
-const INPUT: &str = include_str!("./test.txt");
+const INPUT: &str = include_str!("./input.txt");
 
 fn main() {
-    let (result, _) = INPUT
-        .lines()
-        .map(parse_line)
-        .fold((0, 50), |(score, dial), direction| {
-            let dial = turn(dial, &direction);
-            match dial {
-                0 => (score + 1, dial),
-                _ => (score, dial),
-            }
-        });
+    let (result, _) =
+        INPUT
+            .lines()
+            .map(parse_line)
+            .fold((0, 50), |(score, original_dial), direction| {
+                let (loop_count, dial) = turn(original_dial, &direction);
+
+                println!("{original_dial:?} {direction:?} {dial:?} {loop_count:?}\n=====\n");
+
+                (score + loop_count, dial)
+            });
 
     println!("{result}");
 }
@@ -34,17 +35,28 @@ fn parse_line(input: &str) -> Direction {
     }
 }
 
-fn turn(from: usize, to: &Direction) -> usize {
+fn turn(from: usize, to: &Direction) -> (usize, usize) {
     match to {
-        Direction::Left(by) => {
-            let by_mod = by % 100;
-            (from + 100 - by_mod) % 100
-        }
-        Direction::Right(by) => {
-            let by_mod = by % 100;
-            (from + by_mod) % 100
-        }
+        Direction::Left(by) => turn_left(from, *by, 0),
+        Direction::Right(by) => turn_right(from, *by, 0),
     }
+}
+
+fn turn_left(from: usize, by: usize, loop_count: usize) -> (usize, usize) {
+    if let Some(result) = from.checked_sub(by) {
+        return (loop_count + if result == 0 { 1 } else { 0 }, result);
+    }
+
+    let new_from = from + 100;
+    turn_left(new_from, by, loop_count + if from == 0 { 0 } else { 1 })
+}
+
+fn turn_right(from: usize, by: usize, loop_count: usize) -> (usize, usize) {
+    if from + by < 100 {
+        return (loop_count, from + by);
+    }
+
+    turn_right(by + from - 100, 0, loop_count + 1)
 }
 
 #[cfg(test)]
@@ -58,6 +70,7 @@ mod tests {
         assert_eq!(turn(82, &Direction::Left(30)), 52);
         assert_eq!(turn(5, &Direction::Left(10)), 95);
         assert_eq!(turn(50, &Direction::Left(68)), 82);
+        assert_eq!(turn(0, &Direction::Left(200)), 0);
     }
 
     #[test]
@@ -66,6 +79,7 @@ mod tests {
         assert_eq!(turn(11, &Direction::Right(8)), 19);
         assert_eq!(turn(95, &Direction::Right(10)), 5);
         assert_eq!(turn(95, &Direction::Right(5)), 0);
+        assert_eq!(turn(0, &Direction::Right(200)), 0);
     }
 
     #[test]

@@ -1,15 +1,42 @@
+use std::str::FromStr;
+
+use aoc25_rs::Map;
+
 const INPUT: &str = include_str!("./input.txt");
 
 fn main() {
-    let mut map = parse(INPUT);
+    part1();
+    part2();
+}
+
+fn part1() {
+    let map = Map::<Tile>::from_str(INPUT).unwrap();
+
+    let result = map
+        .iter()
+        .filter(|(_, tile)| matches!(tile, Tile::Roll))
+        .filter(|(pos, _)| {
+            map.get_tiles_ring1(pos)
+                .filter(|(_, tile)| matches!(tile, Tile::Roll))
+                .count()
+                < 4
+        })
+        .count();
+
+    dbg!(result);
+}
+
+fn part2() {
+    let mut map = Map::<Tile>::from_str(INPUT).unwrap();
 
     let mut result = 0;
-
     loop {
-        let pos_to_remove: Vec<_> = walk(&map)
+        let removed = map
+            .iter()
             .filter(|(_, tile)| matches!(tile, Tile::Roll))
             .filter_map(|(pos, _)| {
-                if adjacent_cells(&map, &pos)
+                if map
+                    .get_tiles_ring1(&pos)
                     .filter(|(_, tile)| matches!(tile, Tile::Roll))
                     .count()
                     < 4
@@ -19,25 +46,26 @@ fn main() {
                     None
                 }
             })
-            .collect();
+            .collect::<Vec<_>>();
 
-        if pos_to_remove.is_empty() {
+        if removed.is_empty() {
             break;
         }
 
-        result += pos_to_remove.len();
+        result += removed.len();
 
-        for pos in pos_to_remove {
-            map[pos.1][pos.0] = Tile::Empty;
+        for pos in removed.into_iter() {
+            match map.get_tile_mut(&pos) {
+                Some(tile) => {
+                    *tile = Tile::Empty;
+                }
+                None => panic!(),
+            }
         }
     }
 
     dbg!(result);
 }
-
-type Pos = (usize, usize);
-
-type Map = Vec<Vec<Tile>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Tile {
@@ -45,55 +73,16 @@ enum Tile {
     Roll,
 }
 
-fn parse(input: &str) -> Map {
-    input
-        .lines()
-        .map(|line| {
-            line.chars()
-                .map(|char| match char {
-                    '.' => Tile::Empty,
-                    '@' => Tile::Roll,
-                    _ => panic!(),
-                })
-                .collect()
-        })
-        .collect()
-}
+impl TryFrom<char> for Tile {
+    type Error = char;
 
-fn walk(map: &Map) -> impl Iterator<Item = (Pos, &Tile)> {
-    map.iter()
-        .enumerate()
-        .flat_map(|(y, row)| row.iter().enumerate().map(move |(x, tile)| ((x, y), tile)))
-}
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        let result = match value {
+            '.' => Self::Empty,
+            '@' => Self::Roll,
+            _ => return Err(value),
+        };
 
-fn adjacent_cells<'a>(map: &'a Map, of_pos: &Pos) -> impl Iterator<Item = (Pos, &'a Tile)> {
-    let adjacent_deltas: [(isize, isize); 8] = [
-        // TOP
-        (-1, -1),
-        (0, -1),
-        (1, -1),
-        // MIDDLE
-        (-1, 0),
-        (1, 0),
-        // BOTTOM
-        (-1, 1),
-        (0, 1),
-        (1, 1),
-    ];
-
-    adjacent_deltas
-        .into_iter()
-        .filter_map(|(delta_x, delta_y)| {
-            let x = ((isize::try_from(of_pos.0).unwrap()) + (delta_x))
-                .try_into()
-                .ok()?;
-            let y = ((isize::try_from(of_pos.1).unwrap()) + (delta_y))
-                .try_into()
-                .ok()?;
-
-            let row: &Vec<_> = map.get(y)?;
-            let tile = row.get(x)?;
-
-            Some(((x, y), tile))
-        })
+        Ok(result)
+    }
 }

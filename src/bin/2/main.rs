@@ -175,7 +175,7 @@ fn divide_decimal_digits(number_str: &str, by: usize) -> impl Iterator<Item = us
     }
 
     number_str.as_bytes().chunks(by).map(|chunk| {
-        chunk.into_iter().fold(0_usize, |acc, byte| {
+        chunk.iter().fold(0_usize, |acc, byte| {
             acc * 10 + ((*byte as char).to_digit(10).unwrap() as usize)
         })
     })

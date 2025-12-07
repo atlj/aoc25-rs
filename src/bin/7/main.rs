@@ -1,10 +1,18 @@
-use std::{collections::HashSet, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
 
 use aoc25_rs::{Map, Pos};
 
 const INPUT: &str = include_str!("./input.txt");
 
 fn main() {
+    // part1();
+    part2();
+}
+
+fn part2() {
     let map: Map<Tile> = Map::from_str(INPUT).unwrap();
     let start_pos = map
         .iter()
@@ -17,12 +25,65 @@ fn main() {
         })
         .expect("There is no start");
 
-    let result = tick(&map, HashSet::from_iter([start_pos]), 0);
+    let part2 = tick_dfs(&mut HashMap::new(), &map, start_pos, 1);
 
-    dbg!(result);
+    dbg!(part2);
 }
 
-fn tick(map: &Map<Tile>, beams_pos: HashSet<Pos>, initial_split_count: usize) -> usize {
+fn tick_dfs(
+    memo: &mut HashMap<Pos, usize>,
+    map: &Map<Tile>,
+    pos: Pos,
+    split_count: usize,
+) -> usize {
+    let Some(beam_action) = move_beam(map, &pos) else {
+        return split_count;
+    };
+
+    if let Some(memoized_result) = memo.get(&pos) {
+        return *memoized_result;
+    }
+
+    let result = match beam_action {
+        BeamAction::MovedDownTo(down_pos) => tick_dfs(memo, map, down_pos, split_count),
+        BeamAction::SplittedInto(left_pos, right_pos) => {
+            assert!(left_pos.is_some() || right_pos.is_some());
+
+            split_count
+                + 1
+                + left_pos
+                    .map(|left_pos| tick_dfs(memo, map, left_pos, 0))
+                    .unwrap_or(0)
+                + right_pos
+                    .map(|right_pos| tick_dfs(memo, map, right_pos, 0))
+                    .unwrap_or(0)
+        }
+    };
+
+    memo.insert(pos, result);
+
+    result
+}
+
+fn part1() {
+    let map: Map<Tile> = Map::from_str(INPUT).unwrap();
+    let start_pos = map
+        .iter()
+        .find_map(|(pos, tile)| {
+            if matches!(tile, Tile::Start) {
+                Some(pos)
+            } else {
+                None
+            }
+        })
+        .expect("There is no start");
+
+    let part1 = tick_bfs_dedupe(&map, HashSet::from_iter([start_pos]), 0);
+
+    dbg!(part1);
+}
+
+fn tick_bfs_dedupe(map: &Map<Tile>, beams_pos: HashSet<Pos>, initial_split_count: usize) -> usize {
     if beams_pos.is_empty() {
         return initial_split_count;
     }
@@ -50,7 +111,7 @@ fn tick(map: &Map<Tile>, beams_pos: HashSet<Pos>, initial_split_count: usize) ->
             },
         );
 
-    tick(map, new_beams, new_split_count)
+    tick_bfs_dedupe(map, new_beams, new_split_count)
 }
 
 /// `None` means nowhere left to move

@@ -3,6 +3,72 @@ use std::{collections::HashSet, str::FromStr};
 const INPUT: &str = include_str!("./input.txt");
 
 fn main() {
+    part2();
+}
+
+fn part2() {
+    let boxes: Vec<_> = INPUT.lines().flat_map(JunctionBox::from_str).collect();
+
+    let mut relations: Vec<JunctionPair> = Vec::with_capacity(boxes.len() * (boxes.len() - 1));
+
+    boxes.iter().enumerate().for_each(|(index, junction_box)| {
+        boxes.iter().skip(index + 1).for_each(|second_box| {
+            relations.push(JunctionPair(junction_box.clone(), second_box.clone()));
+        });
+    });
+
+    relations.sort();
+
+    let box_count = boxes.len();
+
+    let mut pool: Vec<HashSet<JunctionBox>> = boxes
+        .into_iter()
+        .map(|item| HashSet::from([item]))
+        .collect();
+
+    for relation in relations.into_iter() {
+        let a_index = pool
+            .iter()
+            .enumerate()
+            .find_map(|(index, set)| {
+                if set.contains(&relation.0) {
+                    Some(index)
+                } else {
+                    None
+                }
+            })
+            .unwrap();
+
+        let b_index = pool
+            .iter()
+            .enumerate()
+            .find_map(|(index, vec)| {
+                if vec.contains(&relation.1) {
+                    Some(index)
+                } else {
+                    None
+                }
+            })
+            .unwrap();
+
+        if a_index == b_index {
+            continue;
+        }
+
+        let a_vec = std::mem::replace(pool.get_mut(a_index).unwrap(), HashSet::new());
+        let b_vec = pool.get_mut(b_index).unwrap();
+
+        b_vec.extend(a_vec);
+
+        if pool.iter().any(|set| set.len() == box_count) {
+            let result = relation.0.x * relation.1.x;
+            dbg!(result);
+            break;
+        }
+    }
+}
+
+fn part1() {
     let boxes: Vec<_> = INPUT.lines().flat_map(JunctionBox::from_str).collect();
 
     // let mut relations: BinaryHeap<Reverse<JunctionPair>> =

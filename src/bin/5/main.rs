@@ -28,7 +28,7 @@ fn part2() {
                     None => {
                         let last = result.last_mut().unwrap();
 
-                        let untangled_ranges = untangle_ranges(processed_range, &last);
+                        let untangled_ranges = untangle_ranges(processed_range, last);
 
                         *last = untangled_ranges.0;
                         head = untangled_ranges.1;

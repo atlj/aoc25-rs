@@ -55,7 +55,7 @@ fn part2() {
             continue;
         }
 
-        let a_vec = std::mem::replace(pool.get_mut(a_index).unwrap(), HashSet::new());
+        let a_vec = std::mem::take(pool.get_mut(a_index).unwrap());
         let b_vec = pool.get_mut(b_index).unwrap();
 
         b_vec.extend(a_vec);
@@ -145,7 +145,7 @@ fn part1() {
             continue;
         }
 
-        let a_vec = std::mem::replace(pool.get_mut(a_index).unwrap(), HashSet::new());
+        let a_vec = std::mem::take(pool.get_mut(a_index).unwrap());
         let b_vec = pool.get_mut(b_index).unwrap();
 
         b_vec.extend(a_vec);
